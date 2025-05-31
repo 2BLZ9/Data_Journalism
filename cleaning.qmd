@@ -1,0 +1,129 @@
+---
+title: "Cleaning"
+format: html
+---
+
+## Set up
+
+```{r}
+library(tidyverse)
+```
+
+## Import Data
+
+```{r}
+df <- read_csv("data/Global Missing Migrants.csv")
+```
+
+## Inspect structure
+
+```{r}
+str(df)
+```
+
+```{r}
+glimpse(df)
+```
+
+## Data Cleaning
+
+```{r}
+# Standardizing and Categorizing Causes of Death
+
+# Separate multiple causes and trim whitespace
+df_cleaned1 <- df |>
+  separate_rows(`Cause of Death`, sep = ",") |>
+  mutate(`Cause of Death` = str_trim(`Cause of Death`))
+
+# Standardize cause names
+df_cleaned2 <- df_cleaned1 |>
+  mutate(`Cause of Death` = case_when(
+    str_to_lower(`Cause of Death`) %in% c(
+      "food", "water", 
+      "harsh environmental conditions / lack of adequate shelter"
+    ) ~ "Lack of food and water",
+    str_to_lower(`Cause of Death`) == "vehicle accident / death linked to hazardous transport" ~ "Vehicle accident",
+    str_to_lower(`Cause of Death`) == "sickness / lack of access to adequate healthcare" ~ "Sickness",
+    str_to_lower(`Cause of Death`) == "mixed or unknown" ~ "Unknown or Mixed",
+    TRUE ~ `Cause of Death`
+  )) |>
+  filter(!str_to_lower(`Cause of Death`) %in% c("food", "water"))
+
+# Categorize causes into broader categories
+df_cleaned3 <- df_cleaned2 |>
+  mutate(cause_category = case_when(
+    str_detect(`Cause of Death`, regex("drowning", ignore_case = TRUE)) ~ "Drowning",
+    str_detect(`Cause of Death`, regex("violence", ignore_case = TRUE)) ~ "Violence",
+    str_detect(`Cause of Death`, regex("vehicle", ignore_case = TRUE)) ~ "Hazardous Transport",
+    str_detect(`Cause of Death`, regex("environmental|shelter|lack of food and water", ignore_case = TRUE)) ~ "Environmental Exposure",
+    str_detect(`Cause of Death`, regex("sickness|healthcare", ignore_case = TRUE)) ~ "Lack of Healthcare",
+    str_detect(`Cause of Death`, regex("accidental", ignore_case = TRUE)) ~ "Accidental",
+    str_detect(`Cause of Death`, regex("unknown|mixed", ignore_case = TRUE)) ~ "Unknown or Mixed",
+    TRUE ~ "Other"
+  ))
+
+# View cleaned causes
+df_cleaned3 |> 
+  distinct(`Cause of Death`) |> 
+  arrange(`Cause of Death`)
+```
+
+```{r}
+# Fomatting Temporal Variables
+df_cleaned4 <- df_cleaned3|>
+  mutate(`Reported Month` = str_to_title(`Reported Month`),`Reported Month` = factor(`Reported Month`, levels = month.name, ordered = TRUE), `Incident year` = as.integer(`Incident year`))
+  
+```
+
+```{r}
+# Standardizing Geographic and Route Information
+
+# Unify Regions and Routes
+df_cleaned5 <- df_cleaned4|>
+  mutate(
+    `Region of Origin` = str_replace_all(`Region of Origin`, "\\s*/\\s*Caribbean \\(P\\)", " & Caribbean"),
+    `Region of Incident` = str_replace_all(`Region of Incident`, "\\s*/\\s*Caribbean \\(P\\)", " & Caribbean"),
+    `Migration route` = str_to_sentence(`Migration route`)
+  )
+
+# Remove or Truncate Verbose Text Columns
+df_cleaned5|>
+  mutate(`Location of death` = str_extract(`Location of death`, "^(.*?)(,|\\()"),
+    `Location of death` = str_remove_all(`Location of death`, ",|\\("))
+```
+
+```{r}
+# Remove Redundant Columns
+df_cleaned6 <- df_cleaned5|>
+  select(-`Number of Dead`,-`Minimum Estimated Number of Missing`,-`Number of Survivors`,-`Information Source`,-`UNSD Geographical Grouping`
+         ,Coordinates)
+
+glimpse(df_cleaned6)
+```
+
+```{r}
+# Cleaning Column Names
+df_cleaned7 <- df_cleaned6
+
+names(df_cleaned7) <- tolower(gsub(" ", "_", names(df_cleaned7)))
+
+df_cleaned8 <- df_cleaned7|>
+  rename(total_death_missing = total_number_of_dead_and_missing)
+
+df_cleaned <- df_cleaned8
+
+glimpse(df_cleaned)
+
+
+
+```
+
+## Save Data
+
+```{r}
+write.csv(df_cleaned, file = "cleaned_data.csv")
+```
+
+```{r}
+save(df_cleaned, file = "cleaned_data.RData")
+```

@@ -1,0 +1,377 @@
+---
+title: "Analysis"
+format: html
+---
+
+# Data Analysis
+
+### Load Data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+df_cleaned <- read_csv("cleaned_data.csv")
+```
+
+### Q1 Which migration routes have become the deadliest?
+
+```{r}
+df_cleaned|>
+  mutate(migration_route= replace_na(migration_route, "Unknown"))|>
+  group_by(migration_route)|>
+  summarise(total_deaths = sum(total_death_missing))|>
+  arrange(-total_deaths)
+
+```
+
+### Q2 How have migrant deaths changed over the years?
+
+```{r}
+# Step 1: Define Region Groups
+df_region <- df_cleaned |>
+  mutate(
+    # Create a broad Region Group to cluster similar regions together
+    `Region Group` = case_when(
+      region_of_incident %in% c("North America", "Central America", "South America", "Caribbean") ~ "Americas",
+      region_of_incident %in% c("Eastern Asia", "Central Asia", "Western Asia", "Southern Asia", "South-eastern Asia") ~ "Asia",
+      region_of_incident %in% c("Northern Africa", "Southern Africa", "Western Africa", "Eastern Africa", "Middle Africa") ~ "Africa",
+      region_of_incident %in% c("Europe", "Mediterranean") ~ "Europe & Mediterranean",
+      TRUE ~ "Other"),
+    # Create a detailed label combining Region Group and specific Region
+    `Region Label` = paste(`Region Group`, "-", region_of_incident))
+  
+# Step 2: Define a Clear Color Palette for Region Groups
+region_colors <- c(
+  "Africa - Northern Africa" = "#a1d99b",
+  "Africa - Southern Africa" = "#74c476",
+  "Africa - Western Africa" = "#41ab5d",
+  "Africa - Eastern Africa" = "#238b45",
+  "Africa - Middle Africa" = "#005a32",
+  
+  "Americas - North America" = "#fdae6b",
+  "Americas - Central America" = "#fd8d3c",
+  "Americas - South America" = "#e6550d",
+  "Americas - Caribbean" = "#a63603",
+  
+  "Asia - Eastern Asia" = "#cbc9e2",
+  "Asia - Central Asia" = "#9e9ac8",
+  "Asia - Western Asia" = "#756bb1",
+  "Asia - Southern Asia" = "#54278f",
+  "Asia - South-eastern Asia" = "#3f007d",
+  
+  "Europe & Mediterranean - Europe" = "#fbb4b9",
+  "Europe & Mediterranean - Mediterranean" = "#f768a1",
+  
+  "Other - Other" = "grey60"
+)
+
+
+# Step 3: Group and Plot with facet_wrap()
+library(plotly)
+
+p1 <- df_region|>
+  group_by(incident_year, `Region Group`, `Region Label`) |>
+  summarise(total_deaths = sum(total_death_missing, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(
+    x = incident_year,
+    y = total_deaths,
+    group = `Region Label`,
+    color = `Region Label`,
+    text = paste0("Year: ", incident_year, "<br>Region: ", `Region Label`, "<br>Deaths: ", total_deaths)
+  )) +
+  geom_line(size = 0.7, alpha = 0.8) +
+  geom_point(size = 1.2, alpha = 0.9) +
+  facet_wrap(~ `Region Group`, ncol = 2) +
+  scale_color_manual(values = region_colors) +
+  scale_x_continuous(breaks = seq(2014, max(df_cleaned$incident_year, na.rm = TRUE), 1)) +
+  labs(
+    title = "Migrant Deaths by Region (2014-2023)",
+    x = "Year", y = "Total Deaths",
+    caption = "Source: IOM Missing Migrants Project | By: Ethan Lim"
+  ) +
+  theme_minimal(base_size = 8) +
+  theme(
+    plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+    strip.text = element_text(size = 8, face = "bold"),
+    panel.grid.minor = element_blank()
+    )
+
+# Step 4: Make plot interactive
+p1 <- ggplotly(p1, tooltip = "text")
+
+# Step 5: Save interactive plot as HTML
+install.packages("htmlwidgets")
+library(htmlwidgets)
+
+htmlwidgets::saveWidget(p1, "vs/interactive_plot1.html", selfcontained = TRUE)
+
+p1
+```
+
+### Q3 What are the most common causes of migrant deaths?
+
+```{r}
+# Tabulate counts for each cause of death
+df_cleaned|>
+  group_by(cause_of_death)|>
+  summarise(n = n())|>
+  arrange(-n)
+```
+
+```{r}
+# Step 1: Prepare data for plotting
+p2_data <- df_cleaned |>
+  filter(!is.na(cause_of_death)) |>
+  group_by(cause_of_death) |>
+  summarise(deaths = sum(total_death_missing, na.rm = TRUE)) |>
+  arrange(-deaths) |>
+  slice_max(deaths, n = 10) |>
+  mutate(cause_of_death = fct_reorder(cause_of_death, deaths), tooltip = paste("<br>Deaths:", deaths)) 
+
+# Step 2: Create the bar plot
+p2 <- ggplot(p2_data, aes(x = cause_of_death, y = deaths, fill = cause_of_death, text = tooltip)) +
+  geom_col(show.legend = FALSE, width = 0.7) +
+  coord_flip() +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(9, "Blues")[3:9]) +
+  labs(
+    title = "Leading Causes of Migrant Deaths",
+    subtitle = "2014-2023",
+    x = NULL,
+    y = "Number of Deaths",
+    caption = "Source: IOM Missing Migrants Project | By: Ethan Lim"
+  ) +
+  theme_minimal(base_family = "Helvetica", base_size = 13) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5, margin = margin(b = 10)),
+    axis.text.y = element_text(face = "bold"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+# Step 4: Make plot interactive
+p2 <- ggplotly(p2, tooltip = "text")
+
+# Step 5: Save interactive plot as HTML
+htmlwidgets::saveWidget(p2, "vs/interactive_plot2.html", selfcontained = TRUE)
+
+p2
+```
+
+### Q4 Do migrant deaths follow seasonal patterns?
+
+```{r}
+# Step 1: Create season variable based on reported month
+df_cleaned|>
+  mutate(season = case_when(
+    reported_month == c("December", "January", "February") ~ "Winter",
+    reported_month == c("March", "April", "May") ~ "Spring", 
+    reported_month == c("June", "July", "August") ~ "Summer", 
+    reported_month == c("September", "October", "November") ~ "Autumn",
+    TRUE ~ NA
+    ))|> 
+  filter(!is.na(season))|>
+  group_by(season)|>
+  summarise(total_deaths = sum(total_death_missing))|>
+  arrange(-total_deaths)
+```
+
+```{r}
+# Step 2: Calculate necessary boxplot statistics manually
+stats_df <- df_cleaned |>
+  filter(!is.na(reported_month), !is.na(incident_year)) |>
+  mutate(
+    month = factor(reported_month, levels = month.name, ordered = TRUE),
+    year = incident_year
+  ) |>
+  group_by(month, year) |>
+  summarise(deaths = sum(total_death_missing, na.rm = TRUE), .groups = "drop") |>
+  group_by(month) |>
+  summarise(
+    Q1 = quantile(deaths, 0.25, na.rm = TRUE),
+    Median = quantile(deaths, 0.5, na.rm = TRUE),
+    Q3 = quantile(deaths, 0.75, na.rm = TRUE),
+    Min = min(deaths, na.rm = TRUE),
+    Max = max(deaths, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 3: Create the boxplot
+p3 <- df_cleaned |>
+  filter(!is.na(reported_month), !is.na(incident_year)) |>
+  mutate(
+    month = factor(reported_month, levels = month.name, ordered = TRUE),
+    year = incident_year
+  ) |>
+  group_by(month, year) |>
+  summarise(deaths = sum(total_death_missing, na.rm = TRUE), .groups = "drop") |>
+  ggplot(aes(x = month, y = deaths)) +
+  geom_boxplot(
+    fill = "#D6EAF8",
+    color = "#2980B9",
+    outlier.color = "#C0392B",
+    outlier.size = 2
+  ) +
+  # Step 3: Add text labels for Q1, Median, Q3
+  geom_text(
+    data = stats_df,
+    aes(x = month, y = Median, label = paste0("Q2: ", round(Median))),
+    vjust = -0.7, size = 2.5, color = "black", inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = stats_df,
+    aes(x = month, y = Q1, label = paste0("Q1: ", round(Q1))),
+    vjust = 1.5, size = 2.2, color = "darkblue", inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = stats_df,
+    aes(x = month, y = Q3, label = paste0("Q3: ", round(Q3))),
+    vjust = -1.5, size = 2.2, color = "darkblue", inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = stats_df,
+    aes(x = month, y = Min, label = paste0("Min: ", round(Min))),
+    vjust = 1.5, size = 2.0, color = "gray40", inherit.aes = FALSE
+  ) +
+  geom_text(
+    data = stats_df,
+    aes(x = month, y = Max, label = paste0("Max: ", round(Max))),
+    vjust = -1.5, size = 2.0, color = "gray40", inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Distribution of Monthly Migrant Deaths",
+    subtitle = "2014-2023",
+    x = "Month",
+    y = "Number of Deaths"
+  ) +
+  theme_minimal(base_family = "Helvetica") +
+  theme(
+    plot.title = element_text(size = 13, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 9, hjust = 0.5, margin = margin(b = 10)),
+    axis.title = element_text(size = 9),
+    axis.text.x = element_text(size = 7, angle = 45, hjust = 1),
+    axis.text.y = element_text(size = 7),
+    panel.grid.major.y = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "white", color = NA)
+  )
+
+# Step 3: Save plot as a PNG file
+ggsave(filename = "vs/Q4.png", plot = p3, width = 8, height = 5, dpi = 300)
+
+p3
+
+```
+
+### Q5 Where are migrant deaths geographically concentrated?
+
+```{r}
+# Step 1: Install & Load packages
+install.packages("rnaturalearth") # For country shapefiles
+install.packages("rnaturalearthdata") # Dependency for rnaturalearth
+library(rnaturalearth)
+
+# Step 2: Extract latitude and longitude from 'coordinates'
+df_cleaned <- df_cleaned |>
+  separate(coordinates, into = c("latitude", "longitude"), sep = ",", remove = FALSE) |>
+  mutate(
+    latitude = as.numeric(trimws(latitude)),
+    longitude = as.numeric(trimws(longitude))
+  )
+
+# Step 3: Filter valid points (non-missing coordinates and deaths > 0)
+df_points <- df_cleaned |>
+  filter(!is.na(latitude), !is.na(longitude), total_death_missing > 0)
+
+# Step 4: Load world map
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Step 5: Plot map
+map0 <- ggplot() +
+  geom_sf(data = world, fill = "gray95", color = "gray70", size = 0.2) +
+  geom_point(
+    data = df_points,
+    aes(x = longitude, y = latitude),
+    color = "red",
+    fill = "white",
+    size = 1.2,
+    alpha = 0.7
+  ) +
+  labs(
+    title = "Geographic Locations of Migrant Deaths (2014-2023)",
+    subtitle = "Each red dot marks a recorded death location",
+    caption = "Source: Missing Migrants Project (IOM) | By: Ethan Lim"
+  ) +
+  coord_sf(xlim = c(-180, 180), ylim = c(-60, 80), expand = FALSE) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    plot.caption = element_text(size = 8),
+    legend.position = "none",
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+# Step 5: Save the map as PNG file
+ggsave(filename = "vs/Q6.png", plot = map0, width = 10, height = 6, dpi = 300)
+
+map0
+```
+
+### Q6 How do migrant deaths vary by region of origin?
+
+```{r}
+# Step 1: Install & Load packages
+install.packages("RColorBrewer") # For color palettes
+library(RColorBrewer)
+
+
+# Step 2: Summarize deaths by country of origin
+df_country <- df_cleaned|>
+  filter(country_of_origin != "Unknown", !is.na(country_of_origin))|>
+  group_by(country_of_origin)|>
+  summarise(total = sum(total_death_missing))
+
+# Step 3: Load World Map
+world_map <- ne_countries(scale = "medium", returnclass = "sf")|>
+  select(name_long, geometry)
+
+# Step 4: Merge deaths to map by country name
+world_map_deaths <- world_map|>
+  left_join(df_country, by = c("name_long" = "country_of_origin"))
+
+# Step 5: Plot map
+
+map1 <- ggplot(world_map_deaths) +
+  geom_sf(aes(fill = total), color = "gray50", size = 0.1) +
+  scale_fill_distiller(
+    palette = "Blues",
+    na.value = "white", 
+    trans = "log",    
+    direction = 1,
+    name = "Total Deaths",
+    breaks = c(1,10,100,1000,2000),
+    guide = guide_colorbar(barwidth = 18, barheight = 0.8, title.position = "top", title.hjust = 0.5)) +
+  labs(
+    title = "Distribution of Migrant Deaths (2014-2023)",
+    subtitle = "By Region of Origin",
+    caption = "Source: Missing Migrants Project (IOM) | By: Ethan Lim"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    plot.subtitle = element_text(size = 9),
+    legend.position = "bottom",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8))
+  
+# Step 6: Save the map as a PNG file
+ggsave(filename = "vs/Q5.png", plot = map1, width = 10, height = 6, dpi = 300)
+
+map1
+```

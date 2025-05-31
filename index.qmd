@@ -1,0 +1,137 @@
+---
+title: "Global Migration Deaths"
+execute: 
+  echo: false
+  warning: false
+  message: false
+---
+
+Migration has long been a major issue of global concern. Every year, thousands of people risk their lives to travel to regions such as the United States and Europe in search of safety, economic opportunities, or family reunification. However, many migrants face extreme dangers during their journeys, resulting in death or disappearance.
+
+This study aims to analyze migration patterns, high-risk routes, and population characteristics to assist policymakers, journalists, and humanitarian organizations in formulating strategies to improve migrant safety, promote policy change, and raise public awareness of the challenges faced by migrants.
+
+The data used in this project was sourced from [Kaggle](https://www.kaggle.com/datasets/nelgiriyewithana/global-missing-migrants-dataset), with the original source provided by the International Organization for Migration ([IOM](https://missingmigrants.iom.int/who-we-are))’s Missing Migrants Project. Since 2014, this dataset has documented incidents of migrant deaths and disappearances worldwide, revealing the risks and trends associated with different migration routes.
+
+## Questions to answer
+
+1\. Which migration routes have become the deadliest?
+
+2\. How have migrant deaths changed over the years?
+
+3\. What are the most common causes of migrant deaths?
+
+4\. Do migrant deaths follow seasonal patterns?
+
+5\. Where are migrant deaths geographically concentrated?
+
+6\. How do migrant deaths vary by region of origin?
+
+## Summary of Findings
+
+### 1. Which migration routes have become the deadliest?
+
+| Migration Route                                       | Total Deaths |
+|:------------------------------------------------------|-------------:|
+| Central Mediterranean                                 |        22862 |
+| Sahara Desert crossing                                |         8251 |
+| US-Mexico border crossing                             |         5970 |
+| Western Africa / Atlantic route to the Canary Islands |         4957 |
+| Western Mediterranean                                 |         3454 |
+| Eastern Mediterranean                                 |         2380 |
+| Horn of Africa to Yemen crossing                      |         1842 |
+| Afghanistan to Iran                                   |         1281 |
+| Caribbean to US                                       |          507 |
+| Western Balkans                                       |          407 |
+
+According to migration death data from 2014 to August 2023, the **Central Mediterranean** route tops the list with 22,862 deaths, far exceeding other routes. This route mainly connects North Africa (especially Libya) with Southern Europe (Italy, Malta). Due to the poor quality of smuggling vessels, lack of rescue resources, and tightening EU immigration policies, this route has long remained the deadliest migration corridor in the world.
+
+The **Sahara Desert** crossing ranks second with 8,251 deaths, also demonstrating extreme migration risks. Migrants crossing the Sahara Desert face multiple threats such as dehydration, hunger, getting lost, and violent attacks. Due to the extremely harsh geographical environment, death incidents are often difficult to detect and record in time.
+
+The **US–Mexico border** crossing route recorded 5,970 deaths, ranking third, indicating that as the U.S. strengthened border controls, Central American migrants were forced to choose more dangerous smuggling routes, leading to a continuous rise in death tolls.
+
+### 2. How have migrant deaths changed over the years?
+
+```{r}
+library(htmltools)
+
+htmltools::tags$iframe(src = "vs/interactive_plot1.html", style = "width: 100%; height: 600px; border: none;")
+
+```
+
+-   The green series represents [African regions.]{style="color: green;"} (Northern, Southern, Western, Eastern, Middle Africa), covering countries south of the Sahara and North African countries (such as Libya, Sudan, Niger).
+
+-   The orange series represents the [Americas]{style="color: orange;"} (North America, Central America, South America, Caribbean), covering migration routes from Mexico, Central American countries, Caribbean nations to South America.
+
+-   The purple series represents [Asian regions]{style="color: #4B0082;"} (Eastern Asia, Southeastern Asia, Southern Asia, Central Asia), involving East Asia (such as China), South Asia (such as Bangladesh, India), Southeast Asia (such as Myanmar, Thailand), and Central Asia.
+
+-   The pink series represents [Europe and the Mediterranean region]{style="color: #ff69b4;"} (Europe, Mediterranean).
+
+Analysis shows that the Central [Mediterranean]{style="color: #ff69b4;"} route has consistently recorded the highest number of deaths throughout the observation period, peaking at over 5,000 deaths in 2016. Although the number declined in the following years, it began to rise again from 2021, mainly due to the conflict in Libya, the reduction of rescue resources in the Mediterranean, and the tightening of European immigration policies.
+
+Meanwhile, deaths along the North [African]{style="color: green;"} crossing routes (especially the Sahara Desert region) surged sharply from 2021, approaching 2,500 deaths, reflecting extremely high survival risks in environments lacking infrastructure and plagued by frequent conflicts.
+
+In the [Americas.]{style="color: orange;"}, deaths along the migration route from Central America to North America have been rising steadily since 2019, reaching around 700 deaths in 2021. As the U.S. tightened border policies, migrants were forced to choose more dangerous smuggling paths, leading to a rise in mortality rates.
+
+In [Asia]{style="color: #4B0082;"}, migration deaths in regions such as Southeast Asia and South Asia remained relatively low overall, but some areas experienced a brief deterioration between 2019 and 2021, possibly related to migration channel closures and economic downturns during the COVID-19 pandemic, which forced some migrants onto more dangerous paths, indirectly increasing death incidents.
+
+### 3. What are the most common causes of migrant deaths?
+
+```{r}
+htmltools::tags$iframe(src = "vs/interactive_plot2.html", style = "width: 100%; height: 600px; border: none;")
+```
+
+Migrant deaths are mainly concentrated around seven major causes. Among them, **drowning** is the most common cause, with deaths far exceeding other categories, reaching nearly 35,000. This phenomenon is closely related to dangerous maritime migration routes, especially in regions such as the Mediterranean, Bay of Bengal, and the Caribbean. The lack of proper rescue systems, poor-quality vessels, and harsh weather conditions have jointly caused large-scale drowning incidents, making maritime migration the deadliest choice.
+
+Secondly, **lack of food and water** is the second major cause of death, with over 10,000 deaths, mainly occurring during long-distance land migrations, particularly across extreme environments like the Sahara Desert and the Darién Gap in Central America. The extreme scarcity of food and water resources has led to mass deaths from dehydration and starvation during journeys.
+
+Closely following is the third leading cause: **"unknown or mixed"**. These often involve multiple overlapping factors—such as dehydration, violence, and sickness—making it difficult to isolate a single cause.
+
+Other common but relatively lower-frequency causes include vehicle accidents, violence, sickness, and accidental deaths. Vehicle accidents often occur during smuggling transport, while deaths from violence are closely linked to cross-border conflicts and criminal group activities.
+
+### 4. Do migrant deaths follow seasonal patterns?
+
+![](vs/Q4.png)
+
+-   Minimum (min): The lowest number of deaths recorded in a given month.
+
+-   First Quartile (Q1): 25% of the data falls below this value — indicates the lower range of typical death counts.
+
+-   Median (Q2): The middle value — half the data falls above and below this. It shows the central trend in deaths.
+
+-   Third Quartile (Q3): 75% of the data falls below this value — indicates the upper range of typical death counts.
+
+-   Maximum (max): The highest number of deaths recorded in a given month.
+
+-   Interquartile Range (IQR): The range between Q1 and Q3 — reflects how much monthly death counts vary.
+
+-   Outliers: Data points far outside the typical range (usually 1.5×IQR above Q3 or below Q1), shown as red dots — these represent unusually high or low death counts.
+
+From the chart, June and December show notably higher median (Q2) death counts compared to other months, with June peaking at 728 deaths—far above May and July. Both months also exhibit wider interquartile ranges (IQRs), indicating greater variability, likely tied to increased maritime migration during favorable weather in the Northern Hemisphere.
+
+April, August, and October also display wide IQRs, suggesting heightened and inconsistent death counts, potentially influenced by policy shifts or regional conflicts.
+
+Outliers (red dots) appear frequently in April, May, July, August, September, and November, with an extreme spike in April, where deaths exceeded 1,600. However, these outliers are irregularly distributed, showing no clear seasonal pattern.
+
+Overall, migrant deaths tend to peak in **summer and early autumn**, with higher counts and greater variability during these months.
+
+### 5. Where are migrant deaths geographically concentrated?
+
+![](vs/Q6.png)
+
+Migrant deaths are mainly concentrated in several high-risk regions: maritime routes (such as the Mediterranean, Bay of Bengal, and Caribbean) are the most densely deadly areas; desert and jungle regions (such as the Sahara Desert and the Darién Gap) have the highest death rates in land migrations; areas around conflict zones (such as the Middle East and the Horn of Africa) form large clusters of deaths; and border areas (such as the US–Mexico border) experience frequent death incidents due to extreme environments and policy pressures.
+
+### 6. How do migrant deaths vary by region of origin?
+
+![](vs/Q5.png)
+
+The map shows significant differences in "migration pressure" among migrants' countries of origin worldwide. Several countries have recorded over 1,000 deaths, concentrated in dark blue areas, reflecting large populations attempting to leave their home countries in search of better lives abroad.
+
+Notably, Haiti, Eritrea, Afghanistan, and Syria have between 1,000 and 2,000 deaths, indicating the profound impact of prolonged war, political instability, and economic collapse on migrant safety.
+
+Additionally, Bangladesh, Nigeria, Sudan, and Venezuela also show relatively high death numbers, concentrated in medium blue areas (100 to 1,000 deaths), reflecting how economic collapse, extreme poverty, and instability have similarly elevated migration risks. Some Latin American countries, such as Honduras and Guatemala, fall into the 100+ deaths range, closely related to high-risk migration routes toward the United States.
+
+In contrast, many developed or relatively stable countries display very low migration death numbers, mostly within the light blue range (1–10 deaths), such as Canada, Australia, Japan, Germany, the United Kingdom, and Nordic countries, indicating that these nations are primary migration destinations, with residents less likely to engage in high-risk irregular migration.
+
+It is worth noting that China, as the world's largest developing country, has maintained relative stability and sustained development, yet it also appears in the medium blue range (100 to 1,000 deaths). This reflects China's large population size, diverse migration motives (such as overseas labor, education, family reunification), and the existence of high-risk routes (such as smuggling and maritime labor), jointly constituting its reality as a "major migrant-sending country" — even with national stability, large numbers of people still aspire to "go out" in pursuit of higher incomes or freer lifestyles.
+
+Overall, migrant deaths are not randomly distributed but highly concentrated in specific countries and migration routes, rooted in global wealth gaps, geopolitical conflicts, and systemic inequality.
