@@ -1,1 +1,1 @@
-Dedicated sharing data-driven stories that highlight overlooked issues around the world
+Sharing data-driven stories that highlight overlooked issues around the world
